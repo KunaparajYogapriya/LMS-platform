@@ -138,7 +138,7 @@ export default function SubjectsPage() {
                 Welcome back, <span className="text-blue-500">{user.name || 'Student'}</span>
               </h1>
               <p className={`${theme.textMuted} text-base font-medium max-w-lg mb-6 leading-relaxed`}>
-                Ready to continue your learning journey? Explore the library below and dive into any course you'd like.
+                Ready to continue your learning journey? Explore the library below and dive into any course you&apos;d like.
               </p>
               
               <div className="flex items-center gap-4">
