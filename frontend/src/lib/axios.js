@@ -5,6 +5,8 @@ const baseURL = typeof window !== 'undefined' && (window.location.hostname === '
   ? 'http://localhost:5000/api'
   : '/api';
 
+console.log('[API] Client initialized with baseURL:', baseURL);
+
 export const apiClient = axios.create({
   baseURL,
   withCredentials: true,

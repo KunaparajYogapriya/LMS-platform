@@ -29,13 +29,21 @@ const useAuthStore = create((set) => ({
   },
 
   hydrate: () => {
-    const token = jsCookie.get('accessToken');
-    if (token) {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      set({ accessToken: token, user: { id: payload.id }, isLoading: false }); 
-    } else {
-      set({ isLoading: false });
+    try {
+      const token = jsCookie.get('accessToken');
+      if (token) {
+        const parts = token.split('.');
+        if (parts.length === 3) {
+          const payload = JSON.parse(atob(parts[1]));
+          set({ accessToken: token, user: { id: payload.id, name: payload.name || 'User' }, isLoading: false });
+          return;
+        }
+      }
+    } catch (e) {
+      console.error('Failed to hydrate auth state', e);
+      jsCookie.remove('accessToken');
     }
+    set({ isLoading: false, user: null, accessToken: null });
   }
 }));
 
