@@ -10,6 +10,7 @@ const COOKIE_OPTIONS = {
 };
 
 export const register = async (req, res, next) => {
+  console.log(`[AUTH] Registration attempt for: ${req.body?.email}`);
   try {
     const { email, password, name } = req.body;
     if (!email || !password || !name) {
@@ -34,6 +35,7 @@ export const register = async (req, res, next) => {
 };
 
 export const login = async (req, res, next) => {
+  console.log(`[AUTH] Login attempt for: ${req.body?.email}`);
   try {
     const { email, password } = req.body;
     if (!email || !password) {
