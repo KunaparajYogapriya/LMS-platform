@@ -34,9 +34,15 @@ const useAuthStore = create((set) => ({
       if (token) {
         const parts = token.split('.');
         if (parts.length === 3) {
-          const payload = JSON.parse(atob(parts[1]));
-          set({ accessToken: token, user: { id: payload.id, name: payload.name || 'User' }, isLoading: false });
-          return;
+          try {
+            const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+            const payload = JSON.parse(atob(base64));
+            console.log('[AUTH] Hydrated session for user:', payload.id);
+            set({ accessToken: token, user: { id: payload.id, name: payload.name || 'User' }, isLoading: false });
+            return;
+          } catch (decodeErr) {
+            console.error('[AUTH] Token decoding failed:', decodeErr);
+          }
         }
       }
     } catch (e) {

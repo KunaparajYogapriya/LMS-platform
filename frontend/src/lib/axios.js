@@ -2,7 +2,7 @@ import axios from 'axios';
 import jsCookie from 'js-cookie';
 
 const baseURL = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-  ? 'http://localhost:5000/api'
+  ? 'http://localhost:5001/api'
   : '/api';
 
 console.log('[API] Client initialized with baseURL:', baseURL);
