@@ -29,72 +29,71 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-[#e0e5ec] flex flex-col justify-center py-12 sm:px-6 lg:px-8 font-sans">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-          Create an account
+        <h2 className="mt-6 text-center text-4xl font-extrabold text-[#4a5568] tracking-wider drop-shadow-sm">
+          Create Account
         </h2>
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10 border border-gray-100">
-          <form className="space-y-6" onSubmit={handleSubmit}>
+        <div className="py-10 px-6 sm:px-10 bg-[#e0e5ec] rounded-3xl shadow-[8px_8px_16px_#a3b1c6,-8px_-8px_16px_#ffffff]">
+          <form className="space-y-8" onSubmit={handleSubmit}>
             {error && (
-              <div className="bg-red-50 text-red-500 p-3 rounded text-sm">{error}</div>
+              <div className="bg-[#e0e5ec] shadow-[inset_4px_4px_8px_#a3b1c6,inset_-4px_-4px_8px_#ffffff] text-red-500 p-4 rounded-xl text-sm font-medium text-center">
+                {error}
+              </div>
             )}
             
             <div>
-              <label className="block text-sm font-medium text-gray-700">Full Name</label>
-              <div className="mt-1">
-                <input
-                  type="text"
-                  required
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                />
-              </div>
+              <label className="block text-sm font-semibold text-[#4a5568] mb-2 px-1">Full Name</label>
+              <input
+                type="text"
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full bg-[#e0e5ec] rounded-xl shadow-[inset_6px_6px_10px_0_#a3b1c6,inset_-6px_-6px_10px_0_#ffffff] focus:outline-none focus:ring-2 focus:ring-[#a3b1c6] px-5 py-3 text-[#4a5568] placeholder-gray-400 font-medium transition-shadow"
+                placeholder="Enter your name"
+              />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700">Email address</label>
-              <div className="mt-1">
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                />
-              </div>
+              <label className="block text-sm font-semibold text-[#4a5568] mb-2 px-1">Email address</label>
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full bg-[#e0e5ec] rounded-xl shadow-[inset_6px_6px_10px_0_#a3b1c6,inset_-6px_-6px_10px_0_#ffffff] focus:outline-none focus:ring-2 focus:ring-[#a3b1c6] px-5 py-3 text-[#4a5568] placeholder-gray-400 font-medium transition-shadow"
+                placeholder="Enter your email"
+              />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700">Password</label>
-              <div className="mt-1">
-                <input
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                />
-              </div>
+              <label className="block text-sm font-semibold text-[#4a5568] mb-2 px-1">Password</label>
+              <input
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full bg-[#e0e5ec] rounded-xl shadow-[inset_6px_6px_10px_0_#a3b1c6,inset_-6px_-6px_10px_0_#ffffff] focus:outline-none focus:ring-2 focus:ring-[#a3b1c6] px-5 py-3 text-[#4a5568] placeholder-gray-400 font-medium transition-shadow"
+                placeholder="Create a password"
+              />
             </div>
 
-            <div>
+            <div className="pt-2">
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-blue-300"
+                className="w-full flex justify-center py-3 px-4 rounded-xl shadow-[6px_6px_10px_0_#a3b1c6,-6px_-6px_10px_0_#ffffff] hover:shadow-[inset_6px_6px_10px_0_#a3b1c6,inset_-6px_-6px_10px_0_#ffffff] active:shadow-[inset_8px_8px_14px_0_#a3b1c6,inset_-8px_-8px_14px_0_#ffffff] focus:outline-none transition-all duration-300 text-lg font-bold text-[#4a5568] disabled:opacity-50"
               >
                 {loading ? 'Signing up...' : 'Sign up'}
               </button>
             </div>
             
-            <div className="text-sm text-center">
-              <Link href="/login" className="font-medium text-blue-600 hover:text-blue-500">
-                Already have an account? Sign in
+            <div className="text-sm text-center mt-6">
+              <Link href="/login" className="font-semibold text-[#4a5568] hover:text-[#2d3748] transition-colors">
+                Already have an account? <span className="underline decoration-[#a3b1c6] underline-offset-4">Sign in</span>
               </Link>
             </div>
           </form>

@@ -1,11 +1,42 @@
-node_modules
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.eslintcache
+
+# Next.js
+.next/
+out/
+build/
+dist/
+
+# Env
 .env
-.next
-dist
-build
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+*.log
+frontend/build_output.log
+
+# Testing & Temp
 videos.json
 out.txt
 out2.txt
 test_lock.js
 test_subject_lock.js
 log_videos.js
+test_api.js
+test_enroll.js
+test_enrollments.js
+test_user_enrollments.js
+migrate_enrollment.js
+backend/database/create_enrollments.sql
+
+# OS
+.DS_Store
+Thumbs.db
