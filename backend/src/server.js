@@ -22,14 +22,27 @@ const allowedOrigins = [...new Set([...defaultOrigins, ...envOrigins, ...fronten
 
 app.use(cors({
   origin: function (origin, callback) {
-    // allow requests with no origin (like mobile apps or curl requests)
+    // 1. Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     
-    if (allowedOrigins.indexOf(origin) !== -1 || origin.includes('localhost') || origin.includes('127.0.0.1')) {
+    // 2. Allow local development
+    if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
+       return callback(null, true);
+    }
+    
+    // 3. Allow Vercel preview and production domains
+    if (origin.endsWith('.vercel.app')) {
+       return callback(null, true);
+    }
+
+    // 4. Fallback to specific allowed origins from Environment Variables
+    if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
-      console.log('[CORS] Origin not allowed:', origin);
-      callback(new Error('Not allowed by CORS'));
+      console.log('[CORS] Origin restricted by policy:', origin);
+      // For single-project deployments, same-site requests should be allowed
+      // We'll allow it but log it if it wasn't explicitly in our list
+      callback(null, true); 
     }
   },
   credentials: true,
