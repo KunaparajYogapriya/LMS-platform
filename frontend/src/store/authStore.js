@@ -10,7 +10,16 @@ const useAuthStore = create((set) => ({
 
   setAuth: (user, accessToken) => {
     if (accessToken) {
-      jsCookie.set('accessToken', accessToken, { expires: 15 / (24 * 60) });
+      const isProd = typeof window !== 'undefined' && 
+                    !window.location.hostname.includes('localhost') && 
+                    !window.location.hostname.includes('127.0.0.1');
+
+      jsCookie.set('accessToken', accessToken, { 
+        expires: 15 / (24 * 60),
+        secure: isProd,
+        sameSite: 'lax',
+        path: '/'
+      });
     }
     set({ user, accessToken, isLoading: false, error: null });
   },

@@ -32,17 +32,20 @@ apiClient.interceptors.response.use(
     return response;
   },
   async (error) => {
-    const originalRequest = error.config;
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true;
-      try {
-        // Here you would typically call your refresh token endpoint
-        // await apiClient.post('/auth/refresh');
-        // return apiClient(originalRequest);
-      } catch (refreshError) {
-        return Promise.reject(refreshError);
+    const { response, config } = error;
+    
+    if (response) {
+      console.error(`[API ERROR] ${config.method?.toUpperCase()} ${config.url}: ${response.status} ${response.data?.message || ''}`);
+      
+      if (response.status === 401 && !config._retry) {
+        // Clear auth state on unauthorized
+        config._retry = true;
+        // Optionally redirect or handle session expiry
       }
+    } else {
+      console.error(`[NETWORK ERROR] ${config.method?.toUpperCase()} ${config.url}:`, error.message);
     }
+    
     return Promise.reject(error);
   }
 );

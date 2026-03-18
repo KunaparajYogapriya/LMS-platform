@@ -33,19 +33,26 @@ const VideoPlayer = ({ video, subjectId }) => {
 
   const extractYoutubeId = (url) => {
     if (!url) return null;
-    if (url.length === 11) return url;
+    
+    // If it's already an ID
+    if (/^[a-zA-Z0-9_-]{11}$/.test(url)) return url;
+    
     try {
-      const parsed = new URL(url);
-      if (parsed.hostname.includes('youtube.com')) {
-         return parsed.searchParams.get('v') || parsed.pathname.split('/').pop();
-      } else if (parsed.hostname.includes('youtu.be')) {
-         return parsed.pathname.slice(1);
+      // Handle various formats including shorts and standard
+      const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([^?&]{11})/);
+      const id = match ? match[1] : null;
+      
+      if (id) {
+        console.log('[VIDEO] Successfully extracted ID:', id);
+        return id;
+      } else {
+        console.warn('[VIDEO] Could not extract ID from URL:', url);
+        return null;
       }
     } catch (e) {
-      // fallback to regex
+      console.error('[VIDEO] Error parsing URL:', url, e);
+      return null;
     }
-    const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([^&]{11})/);
-    return match ? match[1] : null;
   };
 
   const videoId = extractYoutubeId(video?.youtube_url);

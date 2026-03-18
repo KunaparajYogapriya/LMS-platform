@@ -37,12 +37,18 @@ export default function VideoPage({ params }) {
   const markCompleted = async () => {
     if (currentVideo && !isNavigating) {
       setIsNavigating(true);
-      await updateProgress(currentVideo.id, 0, true);
-      await refreshProgress(subjectId);
-      if (nextVideoId) {
-         window.location.href = `/subjects/${subjectId}/video/${nextVideoId}`;
-      } else {
-         window.location.href = `/subjects/${subjectId}`;
+      try {
+        await updateProgress(currentVideo.id, 0, true);
+        await refreshProgress(subjectId);
+        if (nextVideoId) {
+           router.push(`/subjects/${subjectId}/video/${nextVideoId}`);
+        } else {
+           router.push(`/subjects/${subjectId}`);
+        }
+      } catch (e) {
+        console.error('Failed to complete video', e);
+      } finally {
+        setIsNavigating(false);
       }
     }
   };
