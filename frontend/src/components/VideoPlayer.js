@@ -1,7 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useRef } from 'react';
-import YouTube from 'react-youtube';
+import React, { useEffect, useRef, useState } from 'react';
 import useVideoStore from '../store/videoStore';
 import { useRouter } from 'next/navigation';
 import { apiClient } from '../lib/axios';
@@ -9,12 +8,25 @@ import { apiClient } from '../lib/axios';
 const VideoPlayer = ({ video, subjectId }) => {
   const router = useRouter();
   const { updateProgress } = useVideoStore();
-  const [player, setPlayer] = useState(null);
   const [lastPosition, setLastPosition] = useState(0);
+  const playerRef = useRef(null);
+  const containerRef = useRef(null);
   const progressInterval = useRef(null);
+  const [isApiReady, setIsApiReady] = useState(false);
+  const [playerError, setPlayerError] = useState(null);
 
+  // 1. Extract Youtube ID
+  const extractYoutubeId = (url) => {
+    if (!url) return null;
+    url = url.trim();
+    if (/^[a-zA-Z0-9_-]{11}$/.test(url)) return url;
+    const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([^?&]{11})/);
+    return match ? match[1] : null;
+  };
+  const videoId = extractYoutubeId(video?.youtube_url);
+
+  // 2. Fetch Progress
   useEffect(() => {
-    // Fetch initial progress when video loads
     const getInitialProgress = async () => {
       try {
         const { data } = await apiClient.get(`/progress/videos/${video.id}`);
@@ -25,97 +37,133 @@ const VideoPlayer = ({ video, subjectId }) => {
         console.error('Error fetching progress', err);
       }
     };
-
-    if (video?.id) {
-       getInitialProgress();
-    }
+    if (video?.id) getInitialProgress();
   }, [video?.id]);
 
-  const extractYoutubeId = (url) => {
-    if (!url) return null;
-    
-    // If it's already an ID
-    if (/^[a-zA-Z0-9_-]{11}$/.test(url)) return url;
-    
-    try {
-      // Handle various formats including shorts and standard
-      const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([^?&]{11})/);
-      const id = match ? match[1] : null;
-      
-      if (id) {
-        console.log('[VIDEO] Successfully extracted ID:', id);
-        return id;
-      } else {
-        console.warn('[VIDEO] Could not extract ID from URL:', url);
-        return null;
-      }
-    } catch (e) {
-      console.error('[VIDEO] Error parsing URL:', url, e);
-      return null;
-    }
-  };
-
-  const videoId = extractYoutubeId(video?.youtube_url);
-
-  const opts = {
-    height: '100%',
-    width: '100%',
-    playerVars: {
-      autoplay: 1,
-      modestbranding: 1,
-      rel: 0,
-      start: lastPosition
-    },
-  };
-
-  const onReady = (event) => {
-    setPlayer(event.target);
-    // if lastPosition is set, seek to it
-    if (lastPosition > 0) {
-        event.target.seekTo(lastPosition, true);
-    }
-  };
-
-  const onStateChange = (event) => {
-    // 1 is playing, 0 is ended, 2 is paused
-    if (event.data === 1) {
-      // Start tracking progress
-      progressInterval.current = setInterval(() => {
-        const currentTime = event.target.getCurrentTime();
-        if (currentTime > 0) {
-           updateProgress(video.id, currentTime, false);
-        }
-      }, 5000); // sync every 5 seconds
-    } else {
-      clearInterval(progressInterval.current);
-      if (event.data === 0) {
-        // Video finished
-        updateProgress(video.id, event.target.getCurrentTime(), true).then(() => {
-            const { nextVideoId } = useVideoStore.getState();
-            if (nextVideoId) {
-                router.push(`/subjects/${subjectId}/video/${nextVideoId}`);
-            }
-        });
-      }
-    }
-  };
-
+  // 3. Load YouTube IFrame API
   useEffect(() => {
-    return () => clearInterval(progressInterval.current);
+    if (window.YT && window.YT.Player) {
+      setIsApiReady(true);
+      return;
+    }
+
+    const tag = document.createElement('script');
+    tag.src = 'https://www.youtube.com/iframe_api';
+    const firstScriptTag = document.getElementsByTagName('script')[0];
+    firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+    
+    // Global callback for YT API
+    window.onYouTubeIframeAPIReady = () => setIsApiReady(true);
   }, []);
 
-  if (!videoId) return <div className="aspect-video bg-gray-900 flex items-center justify-center text-white">Invalid Playback URL</div>;
+  // 4. Initialize Player
+  useEffect(() => {
+    if (isApiReady && videoId && containerRef.current) {
+      if (playerRef.current && typeof playerRef.current.destroy === 'function') {
+        playerRef.current.destroy();
+      }
+      
+      containerRef.current.innerHTML = '<div id="youtube-player"></div>';
+      
+      const newPlayer = new window.YT.Player('youtube-player', {
+        height: '100%',
+        width: '100%',
+        videoId: videoId,
+        playerVars: {
+          autoplay: 1,
+          modestbranding: 1,
+          rel: 0,
+          start: lastPosition
+        },
+        events: {
+          onReady: (event) => {
+             playerRef.current = event.target;
+          },
+          onStateChange: (event) => {
+            if (event.data === window.YT.PlayerState.PLAYING) {
+              if (progressInterval.current) clearInterval(progressInterval.current);
+              progressInterval.current = setInterval(() => {
+                if (playerRef.current && typeof playerRef.current.getCurrentTime === 'function') {
+                  const currentTime = playerRef.current.getCurrentTime();
+                  if (currentTime > 0) {
+                    updateProgress(video.id, currentTime, false);
+                  }
+                }
+              }, 5000);
+            } else {
+              clearInterval(progressInterval.current);
+              if (event.data === window.YT.PlayerState.ENDED) {
+                updateProgress(video.id, playerRef.current.getCurrentTime(), true).then(() => {
+                  const { nextVideoId } = useVideoStore.getState();
+                  if (nextVideoId) {
+                    router.push(`/subjects/${subjectId}/video/${nextVideoId}`);
+                  }
+                });
+              }
+            }
+          },
+          onError: (event) => {
+            if (event.data === 150 || event.data === 101) {
+              setPlayerError({
+                message: 'This video cannot be embedded (owner disabled playback on other sites).',
+                fallbackUrl: `https://www.youtube.com/watch?v=${videoId}`
+              });
+            } else {
+              setPlayerError({
+                message: 'An unexpected error occurred while loading the video.',
+                fallbackUrl: `https://www.youtube.com/watch?v=${videoId}`
+              });
+            }
+          }
+        }
+      });
+    }
+
+    return () => {
+      if (progressInterval.current) clearInterval(progressInterval.current);
+    };
+  }, [isApiReady, videoId, subjectId, video.id, router, updateProgress, lastPosition]);
+
+  if (!videoId) {
+    return (
+      <div className="w-full aspect-video bg-gray-900 rounded-2xl flex items-center justify-center text-white font-bold p-10 text-center">
+        Invalid Video URL
+      </div>
+    );
+  }
+
+  if (playerError) {
+    return (
+      <div className="w-full aspect-video bg-gray-900 rounded-2xl flex flex-col items-center justify-center text-white p-8 text-center gap-4">
+        <p className="font-medium">{playerError.message}</p>
+        <a
+          href={playerError.fallbackUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-block bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+        >
+          Watch on YouTube
+        </a>
+      </div>
+    );
+  }
 
   return (
-    <div className="aspect-video w-full rounded-xl overflow-hidden shadow-lg bg-black relative">
-       {/* React Youtube wrapper requires absolute positioning inside relative container to fill */}
-       <YouTube 
-          videoId={videoId} 
-          opts={opts} 
-          onReady={onReady} 
-          onStateChange={onStateChange}
-          className="absolute top-0 left-0 w-full h-full"
-       />
+    <div className="w-full rounded-2xl overflow-hidden shadow-2xl bg-black border-4 border-black/10 relative">
+      <div className="w-full aspect-video relative" ref={containerRef}>
+        <div className="absolute inset-0 flex items-center justify-center text-gray-500 text-sm italic">
+          Initializing Player...
+        </div>
+      </div>
+      <style jsx global>{`
+        #youtube-player {
+          width: 100% !important;
+          height: 100% !important;
+          position: absolute;
+          top: 0;
+          left: 0;
+        }
+      `}</style>
     </div>
   );
 };

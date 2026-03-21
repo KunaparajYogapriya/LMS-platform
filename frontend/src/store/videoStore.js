@@ -11,7 +11,7 @@ const useVideoStore = create((set, get) => ({
   error: null,
 
   fetchVideo: async (videoId) => {
-    set({ isLoading: true, error: null });
+    set({ isLoading: true, error: null, currentVideo: null, previousVideoId: null, nextVideoId: null });
     try {
       const { data } = await apiClient.get(`/videos/${videoId}`);
       set({

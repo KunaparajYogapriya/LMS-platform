@@ -55,7 +55,7 @@ export default function VideoPage({ params }) {
 
   if (isLoading) return <div className="p-8 w-full h-full flex items-center justify-center animate-pulse text-gray-400">Loading Video...</div>;
   if (error || locked) return <div className="p-8 w-full h-full flex items-center justify-center text-red-500">Error: {error || 'Video is locked'}</div>;
-  if (!currentVideo) return null;
+  if (!currentVideo || String(currentVideo.id) !== String(videoId)) return null;
 
   return (
     <div className="flex flex-col h-full bg-gray-50 overflow-y-auto">

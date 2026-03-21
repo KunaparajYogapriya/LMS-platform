@@ -38,9 +38,30 @@ apiClient.interceptors.response.use(
       console.error(`[API ERROR] ${config.method?.toUpperCase()} ${config.url}: ${response.status} ${response.data?.message || ''}`);
       
       if (response.status === 401 && !config._retry) {
-        // Clear auth state on unauthorized
         config._retry = true;
-        // Optionally redirect or handle session expiry
+        
+        try {
+          console.log('[API] Attempting token refresh...');
+          const { data } = await axios.post(`${baseURL}/auth/refresh`, {}, { withCredentials: true });
+          const newToken = data.accessToken;
+          
+          if (newToken) {
+            jsCookie.set('accessToken', newToken, { 
+              expires: 15 / (24 * 60),
+              path: '/'
+            });
+            
+            // Retry original request with new token
+            config.headers['Authorization'] = `Bearer ${newToken}`;
+            return axios(config);
+          }
+        } catch (refreshError) {
+          console.error('[API] Refresh flow failed:', refreshError);
+          jsCookie.remove('accessToken');
+          if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+            window.location.href = '/login?msg=session_expired';
+          }
+        }
       }
     } else {
       console.error(`[NETWORK ERROR] ${config.method?.toUpperCase()} ${config.url}:`, error.message);

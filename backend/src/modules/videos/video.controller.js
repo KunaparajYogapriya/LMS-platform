@@ -13,6 +13,13 @@ export const getVideo = async (req, res, next) => {
     if (sections.length === 0) return res.status(404).json({ message: 'Section not found' });
     const section = sections[0];
 
+    // Check enrollment
+    const [enrollment] = await pool.query(
+      'SELECT id FROM enrollments WHERE user_id = ? AND subject_id = ?',
+      [userId, section.subject_id]
+    );
+    if (enrollment.length === 0) return res.status(403).json({ message: 'Must enroll in course to view videos' });
+
     const [allSections] = await pool.query('SELECT * FROM sections WHERE subject_id = ? ORDER BY order_index ASC', [section.subject_id]);
     const sectionIds = allSections.map((s) => s.id);
 
@@ -33,25 +40,6 @@ export const getVideo = async (req, res, next) => {
     const progressMap = {};
     progressList.forEach((p) => { progressMap[p.video_id] = p; });
 
-    let isLocked = false;
-    let computedLocked = false;
-    let prevCompleted = true;
-
-    for (let i = 0; i <= currentIndex; i++) {
-        const vid = orderedVideos[i];
-        const completed = Boolean(progressMap[vid.id]?.is_completed);
-        if (i > 0) {
-            computedLocked = !prevCompleted;
-        } else {
-            computedLocked = false;
-        }
-        
-        if (i === currentIndex) {
-            isLocked = computedLocked;
-        }
-        prevCompleted = completed;
-    }
-
     const previous_video_id = currentIndex > 0 ? orderedVideos[currentIndex - 1].id : null;
     const next_video_id = currentIndex < orderedVideos.length - 1 ? orderedVideos[currentIndex + 1].id : null;
 
@@ -59,7 +47,7 @@ export const getVideo = async (req, res, next) => {
       video,
       previous_video_id,
       next_video_id,
-      locked: isLocked
+      locked: false // Unified access
     });
   } catch (error) {
     next(error);

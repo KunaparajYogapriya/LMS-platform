@@ -8,17 +8,35 @@ const useSidebarStore = create((set) => ({
   error: null,
 
   fetchTree: async (subjectId) => {
-    set({ isLoading: true, error: null });
+    // Clear old state immediately to prevent race conditions during navigation
+    set({ isLoading: true, error: null, subjectTree: [], subject: null });
     try {
-      const { data: treeData } = await apiClient.get(`/subjects/${subjectId}/tree`);
-      const { data: subjectData } = await apiClient.get(`/subjects/${subjectId}`);
+      // Fetch both for performance, if first fails, catch block handles it
+      const [treeRes, subjectRes] = await Promise.all([
+        apiClient.get(`/subjects/${subjectId}/tree`),
+        apiClient.get(`/subjects/${subjectId}`)
+      ]);
+      
       set({ 
-        subjectTree: treeData.sections, 
-        subject: subjectData,
+        subjectTree: treeRes.data.sections, 
+        subject: subjectRes.data,
         isLoading: false 
       });
     } catch (err) {
-      set({ error: 'Error loading curriculum', isLoading: false });
+      const isNotEnrolled = err.response?.status === 403;
+      
+      // If tree failed, try to at least get subject headers
+      let subjectData = null;
+      try {
+        const res = await apiClient.get(`/subjects/${subjectId}`);
+        subjectData = res.data;
+      } catch (e) {}
+
+      set({ 
+        error: isNotEnrolled ? 'Not Enrolled' : 'Error loading curriculum', 
+        subject: subjectData,
+        isLoading: false 
+      });
     }
   },
 

@@ -9,164 +9,82 @@ const seedDatabase = async () => {
     const statements = schema.split(';').filter((stmt) => stmt.trim());
 
     for (let stmt of statements) {
-      await pool.query(stmt);
+      if (stmt.trim()) {
+        await pool.query(stmt);
+      }
     }
     console.log('Schema executed.');
 
-    console.log('Clearing existing data...');
+    console.log('Clearing data...');
     await pool.query('SET FOREIGN_KEY_CHECKS = 0');
     await pool.query('TRUNCATE TABLE video_progress');
     await pool.query('TRUNCATE TABLE videos');
     await pool.query('TRUNCATE TABLE sections');
+    await pool.query('TRUNCATE TABLE enrollments');
     await pool.query('TRUNCATE TABLE subjects');
     await pool.query('TRUNCATE TABLE users');
     await pool.query('SET FOREIGN_KEY_CHECKS = 1');
 
-    console.log('Seeding users...');
+    console.log('Seeding user...');
     const passwordHash = await bcrypt.hash('password123', 10);
-    const [userResult] = await pool.query(
+    await pool.query(
       'INSERT INTO users (email, password_hash, name) VALUES (?, ?, ?)',
-      ['user@example.com', passwordHash, 'Demo User']
-    );
-    console.log('Created user: user@example.com / password123');
-
-    console.log('Seeding subjects...');
-    const [subj1] = await pool.query(
-      'INSERT INTO subjects (title, slug, description, is_published) VALUES (?, ?, ?, ?)',
-      ['React for Beginners', 'react-for-beginners', 'Learn the basics of React development.', true]
-    );
-    const subjectId = subj1.insertId;
-
-    console.log('Seeding sections...');
-    const [sec1] = await pool.query(
-      'INSERT INTO sections (subject_id, title, order_index) VALUES (?, ?, ?)',
-      [subjectId, 'Getting Started', 1]
-    );
-    const sec1Id = sec1.insertId;
-
-    const [sec2] = await pool.query(
-      'INSERT INTO sections (subject_id, title, order_index) VALUES (?, ?, ?)',
-      [subjectId, 'Components & Props', 2]
-    );
-    const sec2Id = sec2.insertId;
-
-    console.log('Seeding videos...');
-    await pool.query(
-      'INSERT INTO videos (section_id, title, description, youtube_url, order_index, duration_seconds) VALUES (?, ?, ?, ?, ?, ?)',
-      [sec1Id, 'Welcome to the Course', 'Introduction to what we will learn.', 'https://www.youtube.com/watch?v=w7ejDZ8SWv8', 1, 120]
-    );
-    await pool.query(
-      'INSERT INTO videos (section_id, title, description, youtube_url, order_index, duration_seconds) VALUES (?, ?, ?, ?, ?, ?)',
-      [sec1Id, 'What is React?', 'A brief overview of React.', 'https://www.youtube.com/watch?v=Tn6-PIqc4UM', 2, 450]
+      ['user@example.com', passwordHash, 'Demo Student']
     );
 
-    await pool.query(
-      'INSERT INTO videos (section_id, title, description, youtube_url, order_index, duration_seconds) VALUES (?, ?, ?, ?, ?, ?)',
-      [sec2Id, 'Creating Components', 'How to create your first component.', 'https://www.youtube.com/watch?v=Ke90Tje7VS0', 1, 320]
-    );
-    await pool.query(
-      'INSERT INTO videos (section_id, title, description, youtube_url, order_index, duration_seconds) VALUES (?, ?, ?, ?, ?, ?)',
-      [sec2Id, 'Using Props', 'Passing data with props.', 'https://www.youtube.com/watch?v=m7OWXtbiXX8', 2, 500]
-    );
+    const insertCourse = async (title, slug, description, category, thumbnailUrl) => {
+      const [result] = await pool.query(
+        'INSERT INTO subjects (title, slug, description, category, thumbnail_url, is_published) VALUES (?, ?, ?, ?, ?, ?)',
+        [title, slug, description, category, thumbnailUrl, true]
+      );
+      return result.insertId;
+    };
 
-    // Course 2: Advanced Next.js
-    const [subj2] = await pool.query(
-      'INSERT INTO subjects (title, slug, description, is_published) VALUES (?, ?, ?, ?)',
-      ['Advanced Next.js Mastery', 'advanced-nextjs', 'Dive deep into Next.js 14 App Router and Server Components.', true]
-    );
-    const subject2Id = subj2.insertId;
+    const insertSection = async (subjectId, title, order) => {
+      const [result] = await pool.query(
+        'INSERT INTO sections (subject_id, title, order_index) VALUES (?, ?, ?)',
+        [subjectId, title, order]
+      );
+      return result.insertId;
+    };
 
-    const [nextSec1] = await pool.query(
-      'INSERT INTO sections (subject_id, title, order_index) VALUES (?, ?, ?)',
-      [subject2Id, 'App Router Fundamentals', 1]
-    );
-    const nextSec1Id = nextSec1.insertId;
+    const insertVideo = async (sectionId, title, desc, url, order, duration) => {
+      await pool.query(
+        'INSERT INTO videos (section_id, title, description, youtube_url, order_index, duration_seconds) VALUES (?, ?, ?, ?, ?, ?)',
+        [sectionId, title, desc, url, order, duration]
+      );
+    };
 
-    await pool.query(
-      'INSERT INTO videos (section_id, title, description, youtube_url, order_index, duration_seconds) VALUES (?, ?, ?, ?, ?, ?)',
-      [nextSec1Id, 'Routing in Next.js', 'Understanding directory-based routing.', 'https://www.youtube.com/watch?v=ZjAqacIC_3c', 1, 600]
-    );
-    await pool.query(
-      'INSERT INTO videos (section_id, title, description, youtube_url, order_index, duration_seconds) VALUES (?, ?, ?, ?, ?, ?)',
-      [nextSec1Id, 'Server vs Client Components', 'When to use what component type and edge cases.', 'https://www.youtube.com/watch?v=ZjAqacIC_3c', 2, 750]
-    );
+    console.log('Seeding Verified Videos...');
+    
+    const javaId = await insertCourse('Java Tutorial for Beginners', 'java-fcc', 'Complete Masterclass for Java.', 'Software Engineering', 'https://img.youtube.com/vi/BGTx91t8q50/maxresdefault.jpg');
+    const javaSec1 = await insertSection(javaId, 'Fundamentals', 1);
+    await insertVideo(javaSec1, 'Java Programming - Full Course', 'Introduction to Java.', 'BGTx91t8q50', 1, 3600);
 
-    // Course 3: Mastering Tailwind CSS
-    const [subj3] = await pool.query(
-      'INSERT INTO subjects (title, slug, description, is_published) VALUES (?, ?, ?, ?)',
-      ['Mastering Tailwind CSS', 'tailwind-css', 'Learn how to style modern web apps beautifully and quickly without writing raw CSS.', true]
-    );
-    const subject3Id = subj3.insertId;
+    const osId = await insertCourse('Operating Systems mastery', 'os-mastery', 'CS fundamentals of Operating Systems.', 'Computer Science', 'https://img.youtube.com/vi/mXw9ruZaxzQ/maxresdefault.jpg');
+    const osSec1 = await insertSection(osId, 'OS Structures', 1);
+    await insertVideo(osSec1, 'Operating System Full Course', 'Architectural overview.', 'mXw9ruZaxzQ', 1, 1300);
 
-    const [twSec1] = await pool.query(
-      'INSERT INTO sections (subject_id, title, order_index) VALUES (?, ?, ?)',
-      [subject3Id, 'Getting Started with Tailwind', 1]
-    );
-    const twSec1Id = twSec1.insertId;
+    const cId = await insertCourse('C Programming (Full Guide)', 'c-guide', 'Master C from scratch.', 'Computer Science', 'https://img.youtube.com/vi/KJgsSFOSQv0/maxresdefault.jpg');
+    const cSec1 = await insertSection(cId, 'Basics', 1);
+    await insertVideo(cSec1, 'C Programming Full Course', 'Data types and constants.', 'KJgsSFOSQv0', 1, 900);
 
-    const [twSec2] = await pool.query(
-      'INSERT INTO sections (subject_id, title, order_index) VALUES (?, ?, ?)',
-      [subject3Id, 'Responsive Design', 2]
-    );
-    const twSec2Id = twSec2.insertId;
+    const jsId = await insertCourse('JavaScript Crash Course', 'js-crash', 'Classic JS fundamentals.', 'Web Development', 'https://img.youtube.com/vi/jS4aFq5-91M/maxresdefault.jpg');
+    const jsSec1 = await insertSection(jsId, 'JS Basics', 1);
+    await insertVideo(jsSec1, 'JavaScript Full Course', 'DOM and Basics.', 'jS4aFq5-91M', 1, 3600);
 
-    await pool.query(
-      'INSERT INTO videos (section_id, title, description, youtube_url, order_index, duration_seconds) VALUES (?, ?, ?, ?, ?, ?)',
-      [twSec1Id, 'Tailwind Setup & Basics', 'Installing and using utility classes.', 'https://www.youtube.com/watch?v=pfaSUYaSgRo', 1, 400]
-    );
-    await pool.query(
-      'INSERT INTO videos (section_id, title, description, youtube_url, order_index, duration_seconds) VALUES (?, ?, ?, ?, ?, ?)',
-      [twSec1Id, 'Flexbox & Grid', 'Layouts made easy.', 'https://www.youtube.com/watch?v=pfaSUYaSgRo', 2, 600]
-    );
-    await pool.query(
-      'INSERT INTO videos (section_id, title, description, youtube_url, order_index, duration_seconds) VALUES (?, ?, ?, ?, ?, ?)',
-      [twSec2Id, 'Breakpoints', 'Making apps responsive for all devices.', 'https://www.youtube.com/watch?v=-_X6PhkjpzU', 1, 350]
-    );
+    const reactId = await insertCourse('React for Beginners', 'react-fcc', 'Modern React 18+.', 'Web Development', 'https://img.youtube.com/vi/bMknfKXIFA8/maxresdefault.jpg');
+    const reactSec1 = await insertSection(reactId, 'Getting Started', 1);
+    await insertVideo(reactSec1, 'React JS Full Course', 'Framework intro.', 'bMknfKXIFA8', 1, 3600);
 
-    // Course 4: Node.js Basics
-    const [subjNode] = await pool.query(
-      'INSERT INTO subjects (title, slug, description, is_published) VALUES (?, ?, ?, ?)',
-      ['Node.js Basics', 'nodejs-basics', 'Learn server-side JavaScript with Node.js.', true]
-    );
-    const subjNodeId = subjNode.insertId;
-
-    const [nodeSec1] = await pool.query(
-      'INSERT INTO sections (subject_id, title, order_index) VALUES (?, ?, ?)',
-      [subjNodeId, 'Introduction to Node', 1]
-    );
-    const nodeSec1Id = nodeSec1.insertId;
-
-    await pool.query(
-      'INSERT INTO videos (section_id, title, description, youtube_url, order_index, duration_seconds) VALUES (?, ?, ?, ?, ?, ?)',
-      [nodeSec1Id, 'What is Node.js?', 'Understand the runtime environment.', 'https://www.youtube.com/watch?v=Tn6-PIqc4UM', 1, 500]
-    );
-    await pool.query(
-      'INSERT INTO videos (section_id, title, description, youtube_url, order_index, duration_seconds) VALUES (?, ?, ?, ?, ?, ?)',
-      [nodeSec1Id, 'Creating a Server', 'Building your first HTTP server.', 'https://www.youtube.com/watch?v=m7OWXtbiXX8', 2, 600]
-    );
-
-    // Course 5: Python for Beginners
-    const [subjPython] = await pool.query(
-      'INSERT INTO subjects (title, slug, description, is_published) VALUES (?, ?, ?, ?)',
-      ['Python for Beginners', 'python-beginners', 'Start your programming journey with Python.', true]
-    );
-    const subjPythonId = subjPython.insertId;
-
-    const [pySec1] = await pool.query(
-      'INSERT INTO sections (subject_id, title, order_index) VALUES (?, ?, ?)',
-      [subjPythonId, 'Python Basics', 1]
-    );
-    const pySec1Id = pySec1.insertId;
-
-    await pool.query(
-      'INSERT INTO videos (section_id, title, description, youtube_url, order_index, duration_seconds) VALUES (?, ?, ?, ?, ?, ?)',
-      [pySec1Id, 'Variables and Data Types', 'Learn about Python data types.', 'https://www.youtube.com/watch?v=Ke90Tje7VS0', 1, 450]
-    );
+    const htmlId = await insertCourse('HTML & CSS Full Course', 'html-css', 'Complete Guide to Web Design.', 'Web Development', 'https://img.youtube.com/vi/mU6anWqZJcc/maxresdefault.jpg');
+    const htmlSec1 = await insertSection(htmlId, 'Web Essentials', 1);
+    await insertVideo(htmlSec1, 'HTML & CSS Full Course - Beginner to Pro', 'Build websites.', 'mU6anWqZJcc', 1, 3600);
 
     console.log('Seeding complete!');
     process.exit(0);
   } catch (error) {
-    console.error('Error seeding database:', error);
+    console.error('Error seeding:', error);
     process.exit(1);
   }
 };

@@ -13,7 +13,7 @@ export const getSubjects = async (req, res, next) => {
     const [subjects] = await pool.query('SELECT * FROM subjects WHERE is_published = TRUE ORDER BY id DESC');
 
     if (!userId) {
-      return res.json(subjects.map(sub => ({ ...sub, progress: 0 })));
+      return res.json(subjects.map(sub => ({ ...sub, progress: 0, isEnrolled: false })));
     }
 
     // Get total videos per subject
@@ -28,28 +28,29 @@ export const getSubjects = async (req, res, next) => {
       'SELECT subject_id FROM enrollments WHERE user_id = ?',
       [userId]
     );
-    const enrolledSubjectIds = new Set(enrollments.map(e => e.subject_id));
+    const enrolledSubjectIds = new Set(enrollments.map(e => Number(e.subject_id)));
 
     // Get all completed videos for this user
     const [progressList] = await pool.query(
       'SELECT video_id FROM video_progress WHERE user_id = ? AND is_completed = TRUE',
       [userId]
     );
-    const completedVideoIds = new Set(progressList.map(p => p.video_id));
+    const completedVideoIds = new Set(progressList.map(p => Number(p.video_id)));
 
     // Calculate progress for each subject
     const subjectsWithProgress = subjects.map(subject => {
-      const subjectVideos = videos.filter(v => v.subject_id === subject.id);
+      const currentSubjectId = Number(subject.id);
+      const subjectVideos = videos.filter(v => Number(v.subject_id) === currentSubjectId);
       const totalVideos = subjectVideos.length;
-      const completedVideos = subjectVideos.filter(v => completedVideoIds.has(v.video_id)).length;
+      const completedVideos = subjectVideos.filter(v => completedVideoIds.has(Number(v.video_id))).length;
       
       const progressPercentage = totalVideos === 0 ? 0 : Math.round((completedVideos / totalVideos) * 100);
-      const isEnrolled = enrolledSubjectIds.has(subject.id);
+      const isEnrolled = enrolledSubjectIds.has(currentSubjectId);
 
       return {
         ...subject,
         progress: progressPercentage,
-        isEnrolled
+        isEnrolled: !!isEnrolled
       };
     });
 
@@ -86,6 +87,19 @@ export const getSubjectTree = async (req, res, next) => {
     const { subjectId } = req.params;
     const userId = req.user.id;
 
+    // Check enrollment
+    const [enrollment] = await pool.query(
+      'SELECT id FROM enrollments WHERE user_id = ? AND subject_id = ?',
+      [userId, subjectId]
+    );
+    
+    if (enrollment.length === 0) {
+      return res.status(403).json({ 
+        message: 'You must enroll in this course to view the curriculum.',
+        notEnrolled: true 
+      });
+    }
+
     const [sections] = await pool.query(
       'SELECT * FROM sections WHERE subject_id = ? ORDER BY order_index ASC',
       [subjectId]
@@ -116,18 +130,13 @@ export const getSubjectTree = async (req, res, next) => {
       orderedVideos.push(...secVideos);
     });
 
-    let prevCompleted = true;
-    const videoDetails = orderedVideos.map((vid, index) => {
+    const videoDetails = orderedVideos.map((vid) => {
       const isCompleted = Boolean(progressMap[vid.id]?.is_completed);
-      
-      const isLocked = index === 0 ? false : !prevCompleted;
-      
-      prevCompleted = isCompleted;
       
       return {
         ...vid,
         is_completed: isCompleted,
-        locked: isLocked,
+        locked: false,
       };
     });
 

@@ -37,6 +37,30 @@ const useAuthStore = create((set) => ({
     }
   },
 
+  refresh: async () => {
+    try {
+      const { data } = await apiClient.post('/auth/refresh');
+      if (data.accessToken) {
+        const isProd = typeof window !== 'undefined' && 
+                      !window.location.hostname.includes('localhost') && 
+                      !window.location.hostname.includes('127.0.0.1');
+
+        jsCookie.set('accessToken', data.accessToken, { 
+          expires: 15 / (24 * 60),
+          secure: isProd,
+          sameSite: 'lax',
+          path: '/'
+        });
+        set({ accessToken: data.accessToken });
+        return data.accessToken;
+      }
+    } catch (err) {
+      console.error('[AUTH] Refresh failed', err);
+      // Optional: logout if refresh fails
+    }
+    return null;
+  },
+
   hydrate: () => {
     try {
       const token = jsCookie.get('accessToken');
